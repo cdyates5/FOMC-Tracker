@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOMC Hawk-Dove Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#ffffff; --bg2:#f5f4f0; --bg3:#ebe9e4;
+  --border:rgba(0,0,0,0.09); --border2:rgba(0,0,0,0.18);
+  --text:#1c1917; --text2:#57534e; --text3:#a8a29e;
+  --hawk:#b91c1c; --hawk-bg:rgba(185,28,28,0.07); --hawk-border:rgba(185,28,28,0.22);
+  --dove:#166534; --dove-bg:rgba(22,101,52,0.07); --dove-border:rgba(22,101,52,0.22);
+  --neut:#1e3a8a; --neut-bg:rgba(30,58,138,0.07); --neut-border:rgba(30,58,138,0.2);
+  --accent:#92400e; --mono:'DM Mono',monospace; --sans:'Inter',system-ui,sans-serif;
+  --serif:'Playfair Display','Georgia',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;}
+.container{max-width:980px;margin:0 auto;padding:40px 24px 72px;}
+.header{margin-bottom:32px;padding-bottom:28px;border-bottom:2px solid var(--text);}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+.eyebrow{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;}
+.title{font-family:var(--serif);font-size:30px;font-weight:700;letter-spacing:-.01em;color:var(--text);line-height:1.2;}
+.subtitle{font-size:13px;color:var(--text2);margin-top:5px;font-weight:300;}
+.update-btn{display:flex;align-items:center;gap:8px;background:var(--text);border:1px solid var(--text);color:#fff;font-family:var(--sans);font-size:12px;font-weight:500;padding:9px 18px;border-radius:0;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase;}
+.update-btn:hover{background:transparent;color:var(--text);}
+.update-btn:disabled{opacity:.4;cursor:not-allowed;}
+.update-btn .spinner{display:none;width:13px;height:13px;border:1.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+.update-btn.loading .spinner{display:block;}
+.update-btn.loading .btn-label{opacity:.7;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.alert-banner{border-left:3px solid var(--hawk);background:rgba(185,28,28,0.05);padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;}
+.alert-icon{font-size:13px;flex-shrink:0;margin-top:2px;color:var(--hawk);}
+.alert-text{font-size:12px;color:var(--text2);line-height:1.6;}
+.alert-text strong{color:var(--hawk);}
+.status-bar{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);padding:9px 14px;font-family:var(--mono);font-size:11px;color:var(--text2);}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--dove);flex-shrink:0;}
+.status-dot.searching{background:var(--accent);animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.progress-log{background:var(--bg2);border:1px solid var(--border);padding:12px 14px;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text2);max-height:100px;overflow-y:auto;display:none;}
+.progress-log.visible{display:block;}
+.log-line{margin-bottom:3px;}
+.log-line .ts{color:var(--text3);margin-right:8px;}
+.log-line.done .msg{color:var(--dove);}
+.log-line.err .msg{color:var(--hawk);}
+.chart-section{border:1px solid var(--border);padding:24px 26px;margin-bottom:20px;background:var(--bg);}
+.panel-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.chart-legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px;}
+.legend-item{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--text2);}
+.legend-swatch{width:20px;height:3px;border-radius:0;}
+.era-row{display:flex;margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--text3);}
+.era-cell{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:4px 6px 0;border-left:1px solid var(--border);}
+.stance-panel{border:1px solid var(--border);padding:22px 26px;margin-bottom:16px;background:var(--bg);}
+.stance-row{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:16px;}
+.stance-verdict{font-family:var(--serif);font-size:22px;font-weight:700;white-space:nowrap;}
+.stance-desc{font-size:13px;color:var(--text2);flex:1;min-width:200px;line-height:1.65;}
+.stat-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.stat-chip{padding:5px 14px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px;font-family:var(--mono);letter-spacing:.04em;}
+.stat-chip.hawk{background:var(--hawk-bg);border:1px solid var(--hawk-border);color:var(--hawk);}
+.stat-chip.dove{background:var(--dove-bg);border:1px solid var(--dove-border);color:var(--dove);}
+.stat-chip.neut{background:var(--neut-bg);border:1px solid var(--neut-border);color:var(--neut);}
+.stat-chip-num{font-family:var(--mono);font-size:16px;}
+.spectrum-bar{position:relative;height:5px;background:linear-gradient(to right,var(--dove),#c8c4bc,var(--hawk));margin-bottom:5px;}
+.spectrum-needle{position:absolute;top:-5px;width:2px;height:15px;background:var(--text);transform:translateX(-50%);transition:left .5s ease;}
+.spectrum-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);}
+.context-block{font-size:13px;color:var(--text2);line-height:1.68;border-left:3px solid var(--border2);padding-left:14px;margin-top:16px;}
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;margin-bottom:20px;border:1px solid var(--border);background:var(--border);}
+.metric-card{background:var(--bg);padding:14px 16px;}
+.metric-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.metric-val{font-size:18px;font-weight:600;color:var(--text);font-family:var(--mono);}
+.metric-val.hawk{color:var(--hawk);}
+.metric-val.dove{color:var(--dove);}
+.metric-val.neut{color:var(--neut);}
+.metric-val.warn{color:var(--accent);}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.section-header{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid var(--border2);margin-bottom:14px;margin-top:4px;}
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1px;margin-bottom:28px;border:1px solid var(--border);background:var(--border);}
+.member-card{background:var(--bg);padding:14px 16px;transition:background .12s;}
+.member-card:hover{background:var(--bg2);}
+.member-card.hawk{border-left:3px solid var(--hawk);}
+.member-card.dove{border-left:3px solid var(--dove);}
+.member-card.neutral{border-left:3px solid var(--neut);}
+.member-card.new-chair{background:rgba(146,64,14,0.03);}
+.mc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px;}
+.mc-name{font-size:14px;font-weight:600;color:var(--text);}
+.mc-role{font-size:11px;color:var(--text3);margin-top:1px;}
+.mc-badge{font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 8px;white-space:nowrap;flex-shrink:0;letter-spacing:.05em;text-transform:uppercase;}
+.mc-badge.hawk{background:var(--hawk-bg);border:1px solid var(--hawk-border);color:var(--hawk);}
+.mc-badge.dove{background:var(--dove-bg);border:1px solid var(--dove-border);color:var(--dove);}
+.mc-badge.neutral{background:var(--neut-bg);border:1px solid var(--neut-border);color:var(--neut);}
+.mc-note{font-size:12px;color:var(--text2);line-height:1.57;}
+.mc-dissent{display:inline-block;font-family:var(--mono);font-size:9px;background:var(--hawk-bg);border:1px solid var(--hawk-border);color:var(--hawk);padding:1px 7px;margin-top:6px;text-transform:uppercase;letter-spacing:.05em;}
+.mc-dissent.dovish{background:var(--dove-bg);border-color:var(--dove-border);color:var(--dove);}
+.mc-new{display:inline-block;font-family:var(--mono);font-size:9px;background:rgba(146,64,14,0.08);border:1px solid rgba(146,64,14,0.22);color:var(--accent);padding:1px 7px;margin-top:6px;text-transform:uppercase;letter-spacing:.05em;}
+.mc-source{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:7px;}
+.outlook-panel{border:1px solid var(--border);padding:20px 26px;background:var(--bg2);}
+.outlook-text{font-size:13px;color:var(--text2);line-height:1.72;}
+.outlook-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;}
+@media(max-width:600px){.outlook-row{grid-template-columns:1fr;}}
+.outlook-col-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;}
+.outlook-col-text{font-size:12px;color:var(--text2);line-height:1.62;}
+.timestamp-row{display:flex;align-items:center;justify-content:space-between;margin-top:24px;flex-wrap:wrap;gap:6px;padding-top:16px;border-top:1px solid var(--border);}
+.ts-left,.ts-right{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.tbl-outer{overflow-x:auto;}
+.tbl-inner{max-height:380px;overflow-y:auto;border:1px solid var(--border);}
+.dtable{width:100%;border-collapse:collapse;font-size:12px;}
+.dtable th{position:sticky;top:0;background:var(--bg3);padding:8px 14px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid var(--border2);font-weight:500;white-space:nowrap;}
+.dtable th.r{text-align:right;}
+.dtable td{padding:5px 14px;border-bottom:1px solid rgba(0,0,0,0.04);vertical-align:middle;white-space:nowrap;}
+.dtable td.r{text-align:right;font-family:var(--mono);}
+.dtable tr:hover td{background:var(--bg2);}
+.dtable tr.ev td{background:rgba(146,64,14,0.04);}
+.dtable tr.ev:hover td{background:rgba(146,64,14,0.08);}
+.sbar{display:flex;align-items:center;gap:7px;}
+.sbar-bg{width:52px;height:3px;background:rgba(0,0,0,0.1);flex-shrink:0;overflow:hidden;}
+.sbar-fill{height:100%;}
+.sval{font-family:var(--mono);font-size:11px;color:var(--text2);min-width:22px;}
+.slbl{font-family:var(--mono);font-size:10px;padding:2px 7px;letter-spacing:.04em;}
+.slbl.hawk{background:var(--hawk-bg);color:var(--hawk);}
+.slbl.dove{background:var(--dove-bg);color:var(--dove);}
+.slbl.neutral{background:var(--neut-bg);color:var(--neut);}
+.era-btn{font-family:var(--mono);font-size:10px;padding:4px 10px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;transition:all .12s;letter-spacing:.04em;}
+.era-btn:hover{border-color:var(--border2);color:var(--text2);}
+.era-btn.on{border-color:var(--text);color:var(--text);background:transparent;}
+.evlbl{font-family:var(--mono);font-size:10px;color:var(--accent);}
+.tbl-summary{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.regime-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--border);background:var(--border);margin-bottom:20px;}
+@media(max-width:640px){.regime-grid{grid-template-columns:1fr;}}
+.regime-cell{background:var(--bg);padding:14px 18px;}
+.regime-cell.was{background:var(--bg2);}
+.regime-head{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px;}
+.regime-cell.was .regime-head{color:var(--text3);}
+.regime-cell.now .regime-head{color:var(--hawk);}
+.regime-item{font-size:12px;color:var(--text2);line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(0,0,0,0.04);}
+.regime-item:last-child{border-bottom:none;}
+.regime-item strong{color:var(--text);font-weight:600;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border2);}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="eyebrow">Federal Reserve</div>
+      <div class="title">FOMC Hawk-Dove Tracker</div>
+      <div class="subtitle">Auto-updates from FOMC statements, minutes, press releases &amp; member speeches</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+      <button class="update-btn" id="updateBtn" onclick="runUpdate()">
+        <div class="spinner"></div><span class="btn-label">↻ Refresh now</span>
+      </button>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-align:right;max-width:200px;line-height:1.4;">Auto-refreshes daily via GitHub Actions. This button only works inside Claude.</div>
+    </div>
+  </div>
+  <div class="alert-banner">
+    <div class="alert-icon">⚡</div>
+    <div class="alert-text"><strong>Hawkish hold, 3 dissents:</strong> July 28–29 meeting — FOMC held at 3.50–3.75% but <strong>Hammack, Kashkari &amp; Logan dissented for a 25bp hike</strong> (first multi-dissent of Warsh's tenure). Warsh: "I asked for a good family fight, and I got one." Markets sold off hard — Dow −1,100 (worst day in over a year), 30Y yield hit highest since 2007. September is now the live meeting: futures price <strong>~75% odds of a hike</strong>.</div>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="status-text">Last manual update Jul 29, 2026 — rate: 3.50–3.75% — vote: 9–3 (Jul 29, hawkish hold). Next: Sep 15–16</span>
+  </div>
+  <div class="progress-log" id="progressLog"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     HISTORICAL CHART — static, always visible
+     ═══════════════════════════════════════════ -->
+<div class="chart-section">
+  <div class="panel-label">Committee sentiment history — January 2000 to present</div>
+  <div class="chart-legend">
+    <div class="legend-item"><div class="legend-swatch score"></div>Hawk-dove score (left axis, 0=full dove · 100=full hawk)</div>
+    <div class="legend-item"><div class="legend-swatch rate" style="border-top:2px dashed #7b8aff;background:transparent;height:0;width:20px;"></div>Fed funds rate % (right axis)</div>
+    <div class="legend-item"><div class="legend-swatch hawk" style="width:12px;height:12px;border-radius:2px;background:rgba(232,89,60,0.25);"></div>Hawkish zone (&gt;60)</div>
+    <div class="legend-item"><div class="legend-swatch" style="width:12px;height:12px;border-radius:2px;background:rgba(123,138,255,0.18);"></div>Neutral zone (40–60)</div>
+    <div class="legend-item"><div class="legend-swatch dove" style="width:12px;height:12px;border-radius:2px;background:rgba(46,196,160,0.2);"></div>Dovish zone (&lt;40)</div>
+  </div>
+  <div style="position:relative;height:280px;">
+    <canvas id="stanceChart" role="img" aria-label="FOMC hawk-dove stance score history from 2000 to 2026, showing hawkish and dovish cycles"></canvas>
+  </div>
+  <!-- Era labels — proportional widths set by JS -->
+  <div class="era-row" id="eraRow"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     HISTORICAL DATA TABLE
+     ═══════════════════════════════════════════ -->
+<div class="chart-section" style="margin-bottom:16px;">
+  <div class="tbl-toolbar">
+    <div class="panel-label" style="margin-bottom:0;">Monthly data — Jan 2000 to present</div>
+    <div id="eraFilters" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+  </div>
+  <div class="tbl-outer">
+    <div class="tbl-inner">
+      <table class="dtable" id="dataTable">
+        <thead>
+          <tr>
+            <th style="min-width:76px;">Date</th>
+            <th style="min-width:110px;">Sentiment score</th>
+            <th style="min-width:86px;">Stance</th>
+            <th class="r" style="min-width:90px;">Fed funds rate</th>
+            <th style="min-width:120px;">Chair era</th>
+            <th style="min-width:140px;">Notable event</th>
+          </tr>
+        </thead>
+        <tbody id="dtBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="tbl-summary" id="tblSummary"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CURRENT DATA — refreshed via API
+     ═══════════════════════════════════════════ -->
+<div id="dashboardRoot">
+  <div class="stance-panel">
+    <div class="panel-label">Current committee stance</div>
+    <div class="stance-row">
+      <div class="stance-verdict" style="color:var(--hawk);">Decidedly Hawkish</div>
+      <div class="stance-desc">Six consecutive holds — but the July vote fractured 9–3 as three regional hawks dissented for an immediate hike. The easing bias is gone, forward guidance abandoned, and the debate has moved entirely to when (not whether) the Fed hikes. September carries ~75% hike odds. Warsh: "I asked for a good family fight, and I got one."</div>
+    </div>
+    <div class="stat-chips">
+      <div class="stat-chip hawk"><span class="stat-chip-num">4</span> hawks</div>
+      <div class="stat-chip neut"><span class="stat-chip-num">6</span> neutral</div>
+      <div class="stat-chip dove"><span class="stat-chip-num">2</span> doves</div>
+    </div>
+    <div class="spectrum-bar"><div class="spectrum-needle" style="left:76%"></div></div>
+    <div class="spectrum-labels"><span>Full dove</span><span>Neutral</span><span>Full hawk</span></div>
+    <div class="context-block">July's 9–3 hold is a classic "hawkish hold" — the majority waited, but three voters (Hammack, Kashkari, Logan) formally dissented for a 25bp hike, the most hawkish dissent bloc in years. Oil topped $100/bbl in mid-July before a US–Iran pause pulled it back toward $88, whipsawing hike odds from 11% to 38% and back. The statement was again ~130 words with no forward guidance. Warsh confirmed press conferences continue through 2026. Markets read the hold as hawkish: 30Y yield hit its highest since 2007.</div>
+  </div>
+
+  <div class="chart-section" style="padding:20px 26px;margin-bottom:16px;">
+    <div class="panel-label">The Warsh regime change — before &amp; after Jun 17</div>
+    <div class="regime-grid" style="margin-bottom:0;">
+      <div class="regime-cell was">
+        <div class="regime-head">Powell era (through Apr 2026)</div>
+        <div class="regime-item"><strong>341-word</strong> statements with detailed economic characterisation</div>
+        <div class="regime-item"><strong>Forward guidance:</strong> "additional adjustments" easing bias</div>
+        <div class="regime-item"><strong>Dot plot:</strong> all participants submit; median showed one 2026 cut</div>
+        <div class="regime-item"><strong>Press conferences</strong> after every meeting, expansive Q&amp;A</div>
+        <div class="regime-item"><strong>8–4 vote</strong> in April — most dissents since 1992</div>
+      </div>
+      <div class="regime-cell now">
+        <div class="regime-head">Warsh era (from Jun 2026)</div>
+        <div class="regime-item"><strong>130-word</strong> statement — "just the facts"</div>
+        <div class="regime-item"><strong>No forward guidance</strong> — "not well suited for the current policy conjuncture"</div>
+        <div class="regime-item"><strong>Dot plot:</strong> Warsh abstains; median flips to a 2026 <strong>hike</strong> (3.8%)</div>
+        <div class="regime-item"><strong>Fewer press conferences</strong> planned; five task forces reviewing all Fed operations</div>
+        <div class="regime-item"><strong>9–3 in July</strong> — the unanimity broke as three hawks dissented for an immediate hike; Warsh welcomes the "family fight"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-card"><div class="metric-label">Fed funds rate</div><div class="metric-val">3.50–3.75%</div><div class="metric-sub">6th consecutive hold</div></div>
+    <div class="metric-card"><div class="metric-label">Last meeting</div><div class="metric-val" style="font-size:13px;">Jul 28–29, 2026</div><div class="metric-sub">Vote: 9–3 (hawkish hold)</div></div>
+    <div class="metric-card"><div class="metric-label">Next meeting</div><div class="metric-val warn" style="font-size:13px;">Sep 15–16</div><div class="metric-sub">~75% hike priced</div></div>
+    <div class="metric-card"><div class="metric-label">CPI (May 2026)</div><div class="metric-val hawk">4.2% YoY</div><div class="metric-sub">Core PCE 3.4%; both above target</div></div>
+    <div class="metric-card"><div class="metric-label">Unemployment</div><div class="metric-val">4.2%</div><div class="metric-sub">Jun payrolls +57k</div></div>
+    <div class="metric-card"><div class="metric-label">Sep hike odds</div><div class="metric-val hawk">~75%</div><div class="metric-sub">Hike is now base case</div></div>
+    <div class="metric-card"><div class="metric-label">Brent crude</div><div class="metric-val warn">~$88</div><div class="metric-sub">Hit $100+ mid-Jul; Iran pause</div></div>
+    <div class="metric-card"><div class="metric-label">30Y Treasury</div><div class="metric-val hawk">5.19%</div><div class="metric-sub">Highest since 2007</div></div>
+  </div>
+
+  <div class="section-header">Board of Governors — permanent voters</div>
+  <div class="members-grid">
+    <div class="member-card neutral new-chair">
+      <div class="mc-top"><div><div class="mc-name">Kevin Warsh <span style="font-size:10px;color:var(--accent);">★ New Chair</span></div><div class="mc-role">Chair, Board of Governors — sworn in May 22</div></div><div class="mc-badge hawk">Hawk-lean</div></div>
+      <div class="mc-note">Held rates at his second meeting (Jul 29) despite three hawkish dissents, choosing to wait rather than prejudge his five task forces due to report this fall. Still refuses forward guidance but noted market tightening is "doing some of the Fed's job." Committed to press conferences through 2026. "I asked for a good family fight, and I got one."</div>
+      <div class="mc-new">Holding for now; task forces report this fall</div>
+      <div class="mc-source">↳ Jul 29 press conference; Jun 17 debut</div>
+    </div>
+    <div class="member-card neutral">
+      <div class="mc-top"><div><div class="mc-name">Jerome Powell <span style="font-size:10px;color:var(--text3);">(former Chair)</span></div><div class="mc-role">Board of Governors — permanent voter</div></div><div class="mc-badge neutral">Neutral</div></div>
+      <div class="mc-note">Voted with the unanimous majority at Warsh's first meeting. Keeping a low profile as promised; no public dissent from the new chair's communication overhaul. His continued Board presence still blocks a White House-preferred appointment.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote; minutes Jul 8</div>
+    </div>
+    <div class="member-card neutral">
+      <div class="mc-top"><div><div class="mc-name">Michael Barr</div><div class="mc-role">Vice Chair for Supervision</div></div><div class="mc-badge neutral">Neutral</div></div>
+      <div class="mc-note">Voted for the unanimous June hold. Centrist; primarily focused on bank supervision and financial stability. Accepted the removal of the easing bias without public objection.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote</div>
+    </div>
+    <div class="member-card dove">
+      <div class="mc-top"><div><div class="mc-name">Michelle Bowman</div><div class="mc-role">Vice Chair for Supervision (acting)</div></div><div class="mc-badge dove">Dovish</div></div>
+      <div class="mc-note">Voted for the unanimous June hold despite prior easing preference. Per the minutes, some participants still see scenarios where inflation eases and allows cuts — Bowman likely among them, but the 4.2% CPI print constrains the dovish case.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote; minutes Jul 8</div>
+    </div>
+    <div class="member-card dove">
+      <div class="mc-top"><div><div class="mc-name">Lisa Cook</div><div class="mc-role">Board of Governors</div></div><div class="mc-badge dove">Dovish</div></div>
+      <div class="mc-note">Voted for the unanimous June hold. Supreme Court removal case still pending. The weak June payrolls print (+57k) supports her employment-focused dovish framework, but 4.2% CPI leaves little room to argue for cuts near-term.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote; SC case ongoing</div>
+    </div>
+    <div class="member-card neutral">
+      <div class="mc-top"><div><div class="mc-name">Philip Jefferson</div><div class="mc-role">Vice Chair</div></div><div class="mc-badge neutral">Neutral</div></div>
+      <div class="mc-note">Voted for the unanimous June hold. Archetypal centrist and key moderating voice as the committee absorbs Warsh's operational overhaul. Balanced framing, data-dependent.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote</div>
+    </div>
+    <div class="member-card neutral">
+      <div class="mc-top"><div><div class="mc-name">Christopher Waller</div><div class="mc-role">Board of Governors</div></div><div class="mc-badge neutral">Neutral</div></div>
+      <div class="mc-note">Voted with the July majority to hold, but has publicly signalled support for tighter policy should inflation persist — a marked shift from his January cut-dissent. Now sits at the hawkish edge of neutral; a possible fourth dissenter if September data runs hot.</div>
+      <div class="mc-source">↳ Jul 29 hold vote; supportive-of-tightening remarks</div>
+    </div>
+    <div class="member-card dove">
+      <div class="mc-top"><div><div class="mc-name">Stephen Miran</div><div class="mc-role">Board of Governors (term expired Jan 31 — serving until successor confirmed)</div></div><div class="mc-badge dove" style="background:rgba(46,196,160,.2);">Super-Dove</div></div>
+      <div class="mc-note">Voted with the unanimous majority in June — his first non-dissent of 2026, ending a streak of cut-dissents at every prior meeting this year. Even the committee's most dovish member could not sustain the easing case against 4.2% CPI. No longer a Board seat conflict: Warsh took a separate vacancy path.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote (first non-dissent of 2026)</div>
+    </div>
+  </div>
+
+  <div class="section-header">New York Fed — permanent voter</div>
+  <div class="members-grid">
+    <div class="member-card neutral">
+      <div class="mc-top"><div><div class="mc-name">John Williams</div><div class="mc-role">NY Fed President — FOMC Vice Chair</div></div><div class="mc-badge neutral">Neutral</div></div>
+      <div class="mc-note">Voted for the unanimous June hold. Classic centrist anchor and the institutional bridge between Warsh and the legacy committee. The June minutes suggest he helped broker the unanimous outcome Warsh called a "family fight."</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote; minutes Jul 8</div>
+    </div>
+  </div>
+
+  <div class="section-header">2026 Rotating Regional Presidents</div>
+  <div class="members-grid">
+    <div class="member-card hawk">
+      <div class="mc-top"><div><div class="mc-name">Beth Hammack</div><div class="mc-role">Cleveland Fed President</div></div><div class="mc-badge hawk">Hawkish</div></div>
+      <div class="mc-note">Dissented again on Jul 29 — this time for an immediate 25bp hike, not just against guidance. Cited the pressure households face from persistently higher prices "across the board." Made the final hawkish case before the pre-meeting blackout. The committee's clearest hawk.</div>
+      <div class="mc-dissent">↑ hawkish dissent — voted for 25bp hike</div>
+      <div class="mc-source">↳ Jul 29 dissent (hike); Apr 29 dissent</div>
+    </div>
+    <div class="member-card hawk">
+      <div class="mc-top"><div><div class="mc-name">Neel Kashkari</div><div class="mc-role">Minneapolis Fed President</div></div><div class="mc-badge hawk">Hawkish</div></div>
+      <div class="mc-note">Dissented on Jul 29 for a 25bp hike alongside Hammack and Logan. His early-2026 warning that a price shock could unanchor expectations has hardened into an active call for tighter policy now, rather than waiting. Full transition from his historically dovish reputation.</div>
+      <div class="mc-dissent">↑ hawkish dissent — voted for 25bp hike</div>
+      <div class="mc-source">↳ Jul 29 dissent (hike); Apr 29 dissent</div>
+    </div>
+    <div class="member-card hawk">
+      <div class="mc-top"><div><div class="mc-name">Lorie Logan</div><div class="mc-role">Dallas Fed President</div></div><div class="mc-badge hawk">Hawkish</div></div>
+      <div class="mc-note">Dissented on Jul 29 for a hike, the most specific of the three: she has stated outright that rates should be "modestly" higher. Her line that inflation has been "too high, for too long" is effectively the hawks' slogan. Now voting her convictions, not just her rhetoric.</div>
+      <div class="mc-dissent">↑ hawkish dissent — voted for 25bp hike</div>
+      <div class="mc-source">↳ Jul 29 dissent (hike); Apr 29 dissent</div>
+    </div>
+    <div class="member-card neutral">
+      <div class="mc-top"><div><div class="mc-name">Anna Paulson</div><div class="mc-role">Chicago Fed President</div></div><div class="mc-badge neutral">Neutral–Dove</div></div>
+      <div class="mc-note">Voted for the unanimous June hold. The +57k June payrolls print supports her labor-market concern, and the minutes note some participants still see scenarios where inflation eases and rates can fall — the dovish tail she represents.</div>
+      <div class="mc-source">↳ Jun 17 unanimous vote; minutes Jul 8</div>
+    </div>
+  </div>
+
+  <div class="outlook-panel">
+    <div class="panel-label">Policy outlook &amp; key risks</div>
+    <div class="outlook-text">September is now the decision point. The July "hawkish hold" with three dissents leaves the committee one hot inflation print away from its first hike since 2023 — futures price ~75% odds of a September move. The wild card is oil: a durable US–Iran pause could pull headline inflation back and unwind the hike trade as fast as it built. Warsh's five task forces report this fall, so a September hike would mean acting before his own reviews conclude.</div>
+    <div class="outlook-row">
+      <div><div class="outlook-col-label">Hawkish case</div><div class="outlook-col-text">Three voters already dissented for an immediate hike; Waller sits on the edge. CPI 4.2% YoY, core PCE 3.4%. Oil topped $100 in mid-July and July crude is still up ~20% on the month, keeping headline inflation hot. The 30Y yield at 5.19% (highest since 2007) shows the market pricing higher-for-longer.</div></div>
+      <div><div class="outlook-col-label">Dovish case</div><div class="outlook-col-text">A US–Iran pause already knocked Brent from $100+ toward $88, collapsing July hike odds from 38% to single digits within days — energy relief could repeat. June payrolls were weak (+57k). Warsh believes AI is ultimately disinflationary and may prefer to wait for his task forces. Trump keeps up public pressure for lower rates, calling the board "political."</div></div>
+    </div>
+  </div>
+
+  <div class="timestamp-row">
+    <div class="ts-left">FOMC Hawk-Dove Tracker</div>
+    <div class="ts-right">Updated Jul 29, 2026 · Sources: Fed.gov, CNBC, Fox Business, CBS, CME FedWatch · Click ↻ Refresh to re-run AI search</div>
+  </div>
+</div><!-- /dashboardRoot -->
+
+<!-- ═══════════════════════════════════════════
+     MARKET PRICING CHART — cuts/hikes priced
+     ═══════════════════════════════════════════ -->
+<div class="chart-section" style="margin-top:16px;">
+  <div class="panel-label">Market-implied rate moves — cuts / hikes priced in</div>
+  <div class="chart-legend" style="margin-bottom:8px;">
+    <div class="legend-item"><div class="legend-swatch" style="width:20px;height:2px;background:#f0c060;border-radius:1px;"></div>6-month horizon</div>
+    <div class="legend-item"><div class="legend-swatch" style="width:20px;height:2px;background:#7b8aff;border-radius:1px;"></div>12-month horizon</div>
+    <div class="legend-item"><div style="width:20px;border-top:2px dashed rgba(60,60,60,0.55);"></div>Effective FFR (right axis)</div>
+    <div class="legend-item"><div class="legend-swatch" style="width:12px;height:12px;border-radius:2px;background:rgba(232,89,60,0.2);"></div>Hikes priced (&gt; 0)</div>
+    <div class="legend-item"><div class="legend-swatch" style="width:12px;height:12px;border-radius:2px;background:rgba(46,196,160,0.2);"></div>Cuts priced (&lt; 0)</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-left:auto;">Each unit = one 25bp move. Source: CME FedWatch / Fed funds futures (estimated)</div>
+  </div>
+  <div style="position:relative;height:240px;">
+    <canvas id="pricingChart" role="img" aria-label="Number of 25bp rate cuts or hikes priced by futures markets over 6 and 12 month horizons, Jan 2023 to Jun 2026"></canvas>
+  </div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;">Jan 2021 – Jul 2026 · Positive values = hikes priced (tightening expected) · Negative values = cuts priced (easing expected) · Values are estimated from CME FedWatch and market commentary</div>
+</div>
+
+</div><!-- /container -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ─── HISTORICAL DATA ────────────────────────────────────────
+// Milestones: [year, month(0=Jan), stance(0=full dove, 100=full hawk), ffr_midpoint_%]
+// Stance reflects COMMITTEE SENTIMENT: hiking cycle direction, rhetoric, dissents, market pricing
+const MILESTONES = [
+  // ── Greenspan late era: dot-com boom at peak, then bust ──
+  [2000,0,72,5.45],  // Jan 2000: hawkish hold, dot-com peak
+  [2000,4,80,6.50],  // May 2000: last hike to 6.5% — peak hawkishness
+  [2000,9,70,6.50],  // Oct 2000: holding but market rolling over
+  [2000,11,58,6.50], // Dec 2000: pivot imminent
+
+  // ── 2001: Rapid easing cycle — recession + 9/11 ──
+  [2001,0,38,6.00],  // Jan 2001: emergency cut Jan 3
+  [2001,2,26,5.00],  // Mar 2001: rapid cuts (recession confirmed)
+  [2001,8,16,3.00],  // Sep 2001: post-9/11 50bp emergency cut
+  [2001,10,20,2.00], // Nov 2001
+  [2001,11,22,1.75], // Dec 2001: cycle pausing
+
+  // ── 2002–2003: Hold at low rates, then final cut ──
+  [2002,5,28,1.75],  // Jun 2002: Enron/WorldCom fallout, on hold
+  [2002,10,18,1.25], // Nov 2002: cut to 1.25%
+  [2003,5,14,1.00],  // Jun 2003: "helicopter Ben" era, cut to 1% — very dovish
+  [2003,11,26,1.00], // Dec 2003: economy recovering, starting to signal exit
+
+  // ── 2004–2006: Gradual hiking — "measured pace" era ──
+  [2004,5,52,1.25],  // Jun 2004: first hike in 4 years
+  [2004,11,62,2.25], // Dec 2004
+  [2005,5,68,3.25],  // Jun 2005
+  [2005,11,72,4.25], // Dec 2005
+  [2006,1,74,4.50],  // Feb 2006: Bernanke takes over
+  [2006,5,78,5.25],  // Jun 2006: final hike to 5.25% — peak hawkish
+
+  // ── 2006–2007: Hawkish hold, then housing cracks ──
+  [2006,8,73,5.25],  // Sep 2006: hold
+  [2006,11,68,5.25], // Dec 2006: starting to worry about housing
+  [2007,2,64,5.25],  // Mar 2007: subprime cracks visible
+  [2007,5,56,5.25],  // Jun 2007: "contained" but credit stress growing
+  [2007,7,46,5.25],  // Aug 2007: BNP Paribas freezes funds — credit crisis
+
+  // ── 2007–2008: Emergency easing — GFC ──
+  [2007,8,38,4.75],  // Sep 2007: first cut
+  [2007,11,32,4.25], // Dec 2007
+  [2008,0,22,3.50],  // Jan 2008: emergency 75bp cut (largest since 1984)
+  [2008,2,16,2.25],  // Mar 2008: Bear Stearns rescue
+  [2008,5,24,2.00],  // Jun 2008: pause — brief inflation worry
+  [2008,8,13,2.00],  // Sep 2008: Lehman collapse
+  [2008,9,9,1.00],   // Oct 2008: coordinated global cuts
+  [2008,11,7,0.125], // Dec 2008: ZLB — zero lower bound
+
+  // ── 2009–2015: Zero lower bound + QE ──
+  [2009,2,10,0.125], // Mar 2009: QE1 announced ($1.75T)
+  [2009,11,11,0.125],
+  [2010,5,11,0.125],
+  [2010,11,12,0.125],// Nov 2010: QE2 ($600B)
+  [2011,5,10,0.125], // Jun 2011: Operation Twist
+  [2011,11,11,0.125],
+  [2012,8,9,0.125],  // Sep 2012: QE3 open-ended — most dovish moment
+  [2013,4,18,0.125], // May 2013: Taper Tantrum — Bernanke hints at tapering
+  [2013,11,26,0.125],// Dec 2013: Taper begins
+  [2014,1,28,0.125], // Feb 2014: Yellen takes over
+  [2014,5,30,0.125],
+  [2014,11,36,0.125],// Oct 2014: QE ends
+  [2015,5,40,0.125], // Hike anticipated
+  [2015,11,52,0.375],// Dec 2015: FIRST HIKE in 9 years
+
+  // ── 2016–2018: Gradual normalisation (Yellen → Powell) ──
+  [2016,5,48,0.375], // Jun 2016: Brexit pause
+  [2016,11,56,0.625],// Dec 2016
+  [2017,2,60,0.875], // Mar 2017
+  [2017,5,62,1.125], // Jun 2017
+  [2017,11,63,1.375],// Dec 2017
+  [2018,1,64,1.50],  // Feb 2018: Powell takes over
+  [2018,2,66,1.625], // Mar 2018
+  [2018,5,68,1.875], // Jun 2018
+  [2018,8,72,2.125], // Sep 2018
+  [2018,11,72,2.375],// Dec 2018: last hike — but markets crash, signalling pause
+
+  // ── 2019: Insurance cuts ──
+  [2019,0,62,2.375], // Jan 2019: "patient" Powell pivot
+  [2019,5,52,2.375], // Jun 2019: insurance cut imminent
+  [2019,6,44,2.125], // Jul 2019: first cut
+  [2019,8,42,1.875], // Sep 2019
+  [2019,9,42,1.625], // Oct 2019: third cut (pause after)
+  [2019,11,48,1.625],// Dec 2019: on hold
+
+  // ── 2020: COVID shock — emergency ZLB ──
+  [2020,1,46,1.625], // Feb 2020
+  [2020,2,9,0.125],  // Mar 2020: emergency cuts to ZLB — COVID
+  [2020,5,9,0.125],
+  [2020,11,9,0.125],
+
+  // ── 2021: "Transitory" inflation → taper ──
+  [2021,2,10,0.125],
+  [2021,5,11,0.125], // Jun 2021: CPI surging but Fed says "transitory"
+  [2021,10,18,0.125],// Nov 2021: taper announced
+  [2021,11,24,0.125],// Dec 2021: accelerated taper, dot plot shifts hawkish
+
+  // ── 2022: Most aggressive hiking in 40 years ──
+  [2022,0,32,0.125], // Jan 2022: hike imminent, QT signalled
+  [2022,2,46,0.375], // Mar 2022: first hike (+25bp)
+  [2022,4,63,0.875], // May 2022: +50bp
+  [2022,5,75,1.625], // Jun 2022: first +75bp (since 1994)
+  [2022,6,80,2.375], // Jul 2022: +75bp
+  [2022,8,85,3.125], // Sep 2022: +75bp #3
+  [2022,10,87,3.875],// Nov 2022: +75bp #4 — peak hawkishness
+  [2022,11,84,4.375],// Dec 2022: slowing to +50bp
+
+  // ── 2023: Slowing, then pause ──
+  [2023,1,80,4.625], // Feb 2023: +25bp
+  [2023,4,78,5.125], // May 2023: +25bp
+  [2023,6,80,5.375], // Jul 2023: final hike to 5.25–5.50%
+  [2023,8,76,5.375], // Sep 2023: first hold — "higher for longer"
+  [2023,11,70,5.375],// Dec 2023: dot plot signals 3 cuts in 2024
+
+  // ── 2024: Hold, then pivot ──
+  [2024,0,66,5.375], // Jan 2024: pushback on rapid cut expectations
+  [2024,2,62,5.375], // Mar 2024: 3 cuts still penciled
+  [2024,5,58,5.375], // Jun 2024: fewer cuts expected
+  [2024,8,50,4.875], // Sep 2024: surprise -50bp cut — pivot
+  [2024,9,46,4.625], // Nov 2024: -25bp
+  [2024,11,44,4.375],// Dec 2024: -25bp; signals slower pace ahead
+
+  // ── 2025: Cautious holds then 3 more cuts ──
+  [2025,0,52,4.375], // Jan 2025: hold (hawkish dissents start)
+  [2025,2,50,4.375], // Mar 2025: hold
+  [2025,5,46,4.375], // Jun 2025: 4th consecutive hold
+  [2025,8,42,4.125], // Sep 2025: -25bp resumes easing
+  [2025,10,38,3.875],// Nov 2025: -25bp
+  [2025,11,36,3.625],// Dec 2025: -25bp; 3rd cut of year
+
+  // ── 2026: Hold with hawkish pivot — Warsh era ──
+  [2026,0,52,3.625], // Jan 2026: hold; Waller+Miran dissent for cuts
+  [2026,2,56,3.625], // Mar 2026: hold; Middle East inflation growing
+  [2026,3,64,3.625], // Apr 2026: 8-4 historic vote; 3 hawk dissents on easing bias
+  [2026,4,66,3.625], // May 2026: Warsh confirmed; hike odds surge
+  [2026,5,71,3.625], // Jun 2026: Warsh debut — easing bias dropped, dot plot flips to hikes
+  [2026,6,76,3.625], // Jul 2026: hawkish 9-3 hold, 3 dissents for a hike; Sep ~75% hike odds
+];
+
+// Key events for annotation
+const KEY_EVENTS = [
+  {label:'9/11',year:2001,month:8,y:95},
+  {label:'Bear Stearns',year:2008,month:2,y:95},
+  {label:'Lehman',year:2008,month:8,y:95},
+  {label:'QE3',year:2012,month:8,y:6},
+  {label:'Taper Tantrum',year:2013,month:4,y:88},
+  {label:'COVID',year:2020,month:2,y:95},
+  {label:'CPI 9.1%',year:2022,month:5,y:6},
+  {label:'First cut 2024',year:2024,month:8,y:88},
+  {label:'Warsh',year:2026,month:4,y:6},
+  {label:'Easing bias dropped',year:2026,month:5,y:92},
+  {label:'3 hawk dissents',year:2026,month:6,y:90},
+];
+
+// Era boundaries for vertical dividers [label, year, month]
+const ERAS = [
+  {name:'Greenspan',year:2000,month:0},
+  {name:'Bernanke',year:2006,month:1},
+  {name:'Yellen',year:2014,month:1},
+  {name:'Powell',year:2018,month:1},
+  {name:'Warsh',year:2026,month:4},
+];
+
+// Linear interpolation between milestones
+function buildChartData() {
+  const labels=[], stance=[], ffr=[];
+  for(let i=0;i<MILESTONES.length-1;i++){
+    const [y1,m1,s1,f1]=MILESTONES[i], [y2,m2,s2,f2]=MILESTONES[i+1];
+    const totalM=(y2-y1)*12+(m2-m1);
+    for(let step=0;step<totalM;step++){
+      const t=step/totalM;
+      const absM=y1*12+m1+step;
+      const y=Math.floor(absM/12), m=absM%12;
+      labels.push(`${y}-${String(m+1).padStart(2,'0')}`);
+      stance.push(+(s1+(s2-s1)*t).toFixed(1));
+      ffr.push(+(f1+(f2-f1)*t).toFixed(3));
+    }
+  }
+  const [ly,lm,ls,lf]=MILESTONES[MILESTONES.length-1];
+  labels.push(`${ly}-${String(lm+1).padStart(2,'0')}`);
+  stance.push(ls); ffr.push(lf);
+  return {labels,stance,ffr};
+}
+
+function initChart() {
+  const {labels, stance, ffr} = buildChartData();
+  const total = labels.length;
+
+  // Build x-tick labels: show only Jan of each year (or every 2 years)
+  const tickLabels = labels.map((l,i) => {
+    const [y,m] = l.split('-').map(Number);
+    return (m===1 && y%2===0) ? String(y) : '';
+  });
+
+  // Era row widths (proportional to months in chart)
+  const eraRow = document.getElementById('eraRow');
+  if(eraRow){
+    const eraData = ERAS.map((e,i)=>{
+      const startM = e.year*12+e.month;
+      const endM = i<ERAS.length-1 ? ERAS[i+1].year*12+ERAS[i+1].month : MILESTONES[MILESTONES.length-1][0]*12+MILESTONES[MILESTONES.length-1][1];
+      return {name:e.name, months: endM-startM};
+    });
+    const totalEraM = eraData.reduce((s,e)=>s+e.months,0);
+    eraRow.innerHTML = eraData.map(e=>{
+      const pct = (e.months/totalEraM*100).toFixed(1);
+      return `<div class="era-cell" style="width:${pct}%">${e.name}</div>`;
+    }).join('');
+  }
+
+  const canvas = document.getElementById('stanceChart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Zone backgrounds plugin
+  const bgPlugin = {
+    id:'bg',
+    beforeDraw(chart){
+      const {ctx:c, chartArea:{top,left,width,height}, scales:{y}} = chart;
+      if(!y) return;
+      c.save();
+      // Hawkish zone 60-100
+      const h60=y.getPixelForValue(60), h100=y.getPixelForValue(100);
+      c.fillStyle='rgba(185,28,28,0.05)';
+      c.fillRect(left,h100,width,h60-h100);
+      // Neutral zone 40-60
+      const h40=y.getPixelForValue(40);
+      c.fillStyle='rgba(30,58,138,0.04)';
+      c.fillRect(left,h60,width,h40-h60);
+      // Dovish zone 0-40
+      const h0=y.getPixelForValue(0);
+      c.fillStyle='rgba(22,101,52,0.05)';
+      c.fillRect(left,h40,width,h0-h40);
+      // Neutral line at 50
+      const h50=y.getPixelForValue(50);
+      c.strokeStyle='rgba(0,0,0,0.07)';
+      c.lineWidth=1; c.setLineDash([4,4]);
+      c.beginPath(); c.moveTo(left,h50); c.lineTo(left+width,h50); c.stroke();
+      c.setLineDash([]);
+      c.restore();
+    }
+  };
+
+  // Era dividers + event annotations plugin
+  const eraPlugin = {
+    id:'eras',
+    afterDraw(chart){
+      const {ctx:c, chartArea:{top,bottom,left,width}, scales:{x}} = chart;
+      if(!x) return;
+      c.save();
+      c.font='10px DM Mono,monospace';
+      c.textAlign='center';
+
+      // Era vertical dividers (skip first — it's the chart start)
+      ERAS.slice(1).forEach(e=>{
+        const label=`${e.year}-${String(e.month+1).padStart(2,'0')}`;
+        const idx=chart.data.labels.indexOf(label);
+        if(idx<0) return;
+        const px=x.getPixelForValue(idx);
+        c.strokeStyle='rgba(0,0,0,0.12)';
+        c.lineWidth=1; c.setLineDash([3,3]);
+        c.beginPath(); c.moveTo(px,top); c.lineTo(px,bottom); c.stroke();
+        c.setLineDash([]);
+        // Era label at top
+        c.fillStyle='rgba(30,58,138,0.45)';
+        c.fillText(e.name,px,top+10);
+      });
+
+      // Key event annotations
+      KEY_EVENTS.forEach(ev=>{
+        const label=`${ev.year}-${String(ev.month+1).padStart(2,'0')}`;
+        const idx=chart.data.labels.indexOf(label);
+        if(idx<0) return;
+        const px=x.getPixelForValue(idx);
+        const {scales:{y}} = chart;
+        const py = y.getPixelForValue(ev.y);
+        // Small dot
+        c.beginPath();
+        c.arc(px,py,3,0,Math.PI*2);
+        c.fillStyle='rgba(146,64,14,0.75)';
+        c.fill();
+        // Label
+        c.fillStyle='rgba(146,64,14,0.8)';
+        c.font='9px DM Mono,monospace';
+        c.textAlign= px < left+width*0.85 ? 'left' : 'right';
+        const offset = px < left+width*0.85 ? 5 : -5;
+        c.fillText(ev.label, px+offset, py+(ev.y>50?-5:12));
+      });
+      c.restore();
+    }
+  };
+
+  new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Hawk-dove score',
+          data:stance,
+          borderColor:'#991b1b',
+          borderWidth:2,
+          pointRadius:0,
+          pointHoverRadius:4,
+          pointHoverBackgroundColor:'#991b1b',
+          tension:0.35,
+          fill:false,
+          yAxisID:'y',
+        },
+        {
+          label:'Fed funds rate (%)',
+          data:ffr,
+          borderColor:'rgba(30,58,138,0.75)',
+          borderWidth:1.5,
+          borderDash:[4,3],
+          pointRadius:0,
+          pointHoverRadius:3,
+          pointHoverBackgroundColor:'#1e3a8a',
+          tension:0.2,
+          fill:false,
+          yAxisID:'y2',
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      animation:{duration:600},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(255,255,255,0.98)',
+          borderColor:'rgba(0,0,0,0.12)',
+          borderWidth:1,
+          titleColor:'#1c1917',
+          bodyColor:'#57534e',
+          titleFont:{family:'DM Mono',size:11},
+          bodyFont:{family:'DM Sans',size:12},
+          padding:10,
+          callbacks:{
+            title:(items)=>items[0].label,
+            label:(item)=>{
+              if(item.datasetIndex===0){
+                const v=item.raw;
+                const lbl=v>60?'Hawkish':v<40?'Dovish':'Neutral';
+                return ` Score: ${v.toFixed(0)}/100 (${lbl})`;
+              }
+              return ` Fed funds: ${item.raw.toFixed(2)}%`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          type:'category',
+          ticks:{
+            color:'#a8a29e',
+            font:{family:'DM Mono',size:10},
+            callback:(val,i)=>tickLabels[i]||null,
+            maxRotation:0,
+            autoSkip:false,
+          },
+          grid:{color:'rgba(0,0,0,0.07)'},
+          border:{color:'rgba(0,0,0,0.12)'},
+        },
+        y:{
+          min:0, max:100,
+          position:'left',
+          ticks:{
+            color:'#a8a29e',
+            font:{family:'DM Mono',size:10},
+            stepSize:20,
+            callback:v=>{
+              if(v===0)return 'Dove';
+              if(v===50)return 'Neutral';
+              if(v===100)return 'Hawk';
+              return v;
+            }
+          },
+          grid:{color:'rgba(0,0,0,0.07)'},
+          border:{color:'rgba(0,0,0,0.12)'},
+        },
+        y2:{
+          min:0, max:8,
+          position:'right',
+          ticks:{
+            color:'rgba(123,138,255,0.6)',
+            font:{family:'DM Mono',size:10},
+            callback:v=>v+'%',
+            stepSize:2,
+          },
+          grid:{display:false},
+          border:{color:'rgba(0,0,0,0.12)'},
+        }
+      }
+    },
+    plugins:[bgPlugin, eraPlugin]
+  });
+}
+
+// ─── API REFRESH ────────────────────────────────────────────
+const SYSTEM_PROMPT=`You are a Federal Reserve analyst. Search the web for the most current FOMC data then output ONLY valid JSON (no markdown fences) matching this exact schema:
+{"updated":"ISO date","rate_range":"e.g. 3.50-3.75%","last_meeting":"e.g. April 28-29, 2026","next_meeting":"e.g. June 16-17, 2026","vote_result":"e.g. 8-4 (hold)","overall_stance":"Decidedly Hawkish|Leaning Hawkish|Neutral|Leaning Dovish|Decidedly Dovish","overall_stance_score":0-100,"stance_summary":"2-3 sentences","policy_outlook":"2-4 sentences","hawk_count":number,"neutral_count":number,"dove_count":number,"alert":null_or_string,"members":[{"name":"Full name","title":"Role","voter":true/false,"stance":"Hawkish|Neutral|Dovish","stance_score":0-100,"dissent":null_or_hawkish_or_dovish,"dissent_detail":null_or_brief,"is_new":false,"note":"2-3 sentence current view with recent quotes","latest_source":"most recent event"}]}
+Search: 1)Latest FOMC statement+minutes 2)Chair press conference 3)Each member individually 4)CPI/unemployment/futures data. Output ONLY the JSON.`;
+
+function log(msg,type=''){
+  const el=document.getElementById('progressLog');
+  el.classList.add('visible');
+  const now=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line=document.createElement('div');
+  line.className=`log-line ${type}`;
+  line.innerHTML=`<span class="ts">${now}</span><span class="msg">${msg}</span>`;
+  el.appendChild(line); el.scrollTop=el.scrollHeight;
+}
+
+function setStatus(msg,searching=false){
+  document.getElementById('status-text').textContent=msg;
+  document.getElementById('statusDot').className='status-dot'+(searching?' searching':'');
+}
+
+async function runUpdate(){
+  const btn=document.getElementById('updateBtn');
+  btn.disabled=true; btn.classList.add('loading');
+  btn.querySelector('.btn-label').textContent='Searching…';
+  document.getElementById('progressLog').innerHTML='';
+  setStatus('Connecting to Claude…',true);
+  log('Starting FOMC data fetch via Claude API + web search');
+  try{
+    log('Sending research request — searches ~12 member speeches + latest FOMC data');
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        system:SYSTEM_PROMPT,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:`Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}. Search for: 1)Most recent FOMC statement+minutes 2)Fed Chair latest remarks 3)Individual speeches from all 12 current FOMC voters: Warsh, Powell, Williams, Barr, Bowman, Cook, Jefferson, Waller, Miran, Hammack, Kashkari, Logan, Paulson 4)Current CPI, unemployment, Fed funds futures. Output ONLY the JSON.`}]
+      })
+    });
+    if(!response.ok){const e=await response.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${response.status}`);}
+    const data=await response.json();
+    log(`Response received (${data.content?.length} blocks)`);
+    let searches=0;
+    for(const b of data.content||[]){if(b.type==='tool_use'){searches++;log(`Search ${searches}: "${b.input?.query||''}"`);}}
+    if(searches>0)log(`Completed ${searches} web searches`);
+    const text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(!text.trim())throw new Error('No text response from API');
+    log('Parsing JSON…');
+    const cleaned=text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const s=cleaned.indexOf('{'),e2=cleaned.lastIndexOf('}');
+    if(s===-1||e2===-1)throw new Error('No JSON found');
+    const parsed=JSON.parse(cleaned.slice(s,e2+1));
+    log(`Parsed: ${parsed.members?.length||0} members · rate ${parsed.rate_range}`,'done');
+    renderDashboard(parsed);
+    setStatus(`Updated ${new Date().toLocaleString()} — ${parsed.rate_range} — ${parsed.vote_result}`);
+  }catch(err){
+    log('Error: '+err.message,'err');
+    setStatus('Update failed — '+err.message);
+  }
+  btn.disabled=false; btn.classList.remove('loading');
+  btn.querySelector('.btn-label').textContent='↻ Refresh now';
+}
+
+function stanceCls(s){
+  if(!s)return 'neutral';
+  const l=s.toLowerCase();
+  if(l.includes('hawk'))return 'hawk';
+  if(l.includes('dov'))return 'dove';
+  return 'neutral';
+}
+
+function memberCard(m){
+  const cls=stanceCls(m.stance);
+  const newTag=m.is_new?`<div class="mc-new">New — first meeting incoming</div>`:'';
+  const disTag=m.dissent?`<div class="mc-dissent ${m.dissent==='dovish'?'dovish':''}">${m.dissent==='hawkish'?'↑ hawkish dissent':'↓ dovish dissent'}${m.dissent_detail?' — '+m.dissent_detail:''}</div>`:'';
+  return `<div class="member-card ${cls}${m.is_new?' new-chair':''}">
+    <div class="mc-top"><div><div class="mc-name">${m.name}</div><div class="mc-role">${m.title||''}</div></div><div class="mc-badge ${cls}">${m.stance||'N/A'}</div></div>
+    <div class="mc-note">${m.note||''}</div>${newTag}${disTag}
+    ${m.latest_source?`<div class="mc-source">↳ ${m.latest_source}</div>`:''}
+  </div>`;
+}
+
+function renderDashboard(d){
+  const score=d.overall_stance_score??50;
+  const needle=Math.max(5,Math.min(95,score));
+  const voters=(d.members||[]).filter(m=>m.voter!==false);
+  const govs=voters.filter(m=>{const t=(m.title||'').toLowerCase();return t.includes('board')||t.includes('chair')||t.includes('governor');});
+  const ny=voters.filter(m=>(m.title||'').toLowerCase().includes('new york'));
+  const reg=voters.filter(m=>!govs.includes(m)&&!ny.includes(m));
+  const nonV=(d.members||[]).filter(m=>m.voter===false);
+  const alertHTML=d.alert?`<div class="alert-banner"><div class="alert-icon">⚡</div><div class="alert-text">${d.alert}</div></div>`:'';
+  document.getElementById('dashboardRoot').innerHTML=`
+    ${alertHTML}
+    <div class="stance-panel">
+      <div class="panel-label">Current committee stance</div>
+      <div class="stance-row">
+        <div class="stance-verdict" style="color:${score>60?'var(--hawk)':score<40?'var(--dove)':'var(--neut)'}">${d.overall_stance||'—'}</div>
+        <div class="stance-desc">${d.stance_summary||''}</div>
+      </div>
+      <div class="stat-chips">
+        <div class="stat-chip hawk"><span class="stat-chip-num">${d.hawk_count??0}</span> hawks</div>
+        <div class="stat-chip neut"><span class="stat-chip-num">${d.neutral_count??0}</span> neutral</div>
+        <div class="stat-chip dove"><span class="stat-chip-num">${d.dove_count??0}</span> doves</div>
+      </div>
+      <div class="spectrum-bar"><div class="spectrum-needle" style="left:${needle}%"></div></div>
+      <div class="spectrum-labels"><span>Full dove</span><span>Neutral</span><span>Full hawk</span></div>
+      ${d.stance_summary?`<div class="context-block">${d.stance_summary}</div>`:''}
+    </div>
+    <div class="metrics-row">
+      <div class="metric-card"><div class="metric-label">Fed funds rate</div><div class="metric-val">${d.rate_range||'—'}</div><div class="metric-sub">Target range</div></div>
+      <div class="metric-card"><div class="metric-label">Last meeting</div><div class="metric-val" style="font-size:13px">${d.last_meeting||'—'}</div><div class="metric-sub">Vote: ${d.vote_result||'—'}</div></div>
+      <div class="metric-card"><div class="metric-label">Next meeting</div><div class="metric-val warn" style="font-size:13px">${d.next_meeting||'—'}</div><div class="metric-sub">Scheduled</div></div>
+      <div class="metric-card"><div class="metric-label">Sentiment score</div><div class="metric-val ${score>60?'hawk':score<40?'dove':'neut'}">${score}/100</div><div class="metric-sub">${score>60?'Hawkish':score<40?'Dovish':'Balanced'}</div></div>
+    </div>
+    ${govs.length?`<div class="section-header">Board of Governors — permanent voters</div><div class="members-grid">${govs.map(memberCard).join('')}</div>`:''}
+    ${ny.length?`<div class="section-header">New York Fed — permanent voter</div><div class="members-grid">${ny.map(memberCard).join('')}</div>`:''}
+    ${reg.length?`<div class="section-header">2026 Rotating Regional Presidents</div><div class="members-grid">${reg.map(memberCard).join('')}</div>`:''}
+    ${nonV.length?`<div class="section-header">Non-voting members</div><div class="members-grid">${nonV.map(memberCard).join('')}</div>`:''}
+    <div class="outlook-panel">
+      <div class="panel-label">Policy outlook</div>
+      <div class="outlook-text">${d.policy_outlook||'No outlook data.'}</div>
+    </div>
+    <div class="timestamp-row">
+      <div class="ts-left">FOMC Hawk-Dove Tracker</div>
+      <div class="ts-right">Data via Claude API + web search · ${new Date().toLocaleString()}</div>
+    </div>`;
+}
+
+// ─── DATA TABLE ─────────────────────────────────────────────
+function initTable(){
+  const {labels,stance,ffr}=buildChartData();
+
+  // Event lookup keyed by "YYYY-MM"
+  const evtMap={};
+  KEY_EVENTS.forEach(ev=>{
+    evtMap[`${ev.year}-${String(ev.month+1).padStart(2,'0')}`]=ev.label;
+  });
+
+  // Era boundaries (month absolute = year*12+month_0based)
+  function eraOf(label){
+    const [y,m]=label.split('-').map(Number);
+    const a=y*12+(m-1);
+    if(a<2006*12+1) return 'Greenspan';
+    if(a<2014*12+1) return 'Bernanke';
+    if(a<2018*12+1) return 'Yellen';
+    if(a<2026*12+4) return 'Powell';
+    return 'Warsh';
+  }
+
+  // Build era filter buttons
+  const ERAS_F=['All','Greenspan','Bernanke','Yellen','Powell','Warsh'];
+  let activeEra='All';
+  const filtersDiv=document.getElementById('eraFilters');
+  if(filtersDiv){
+    ERAS_F.forEach(era=>{
+      const btn=document.createElement('button');
+      btn.className='era-btn'+(era==='All'?' on':'');
+      btn.textContent=era;
+      btn.onclick=()=>{
+        activeEra=era;
+        document.querySelectorAll('.era-btn').forEach(b=>b.classList.remove('on'));
+        btn.classList.add('on');
+        renderTable();
+      };
+      filtersDiv.appendChild(btn);
+    });
+  }
+
+  function renderTable(){
+    const tbody=document.getElementById('dtBody');
+    if(!tbody) return;
+    const frag=document.createDocumentFragment();
+    let count=0;
+
+    for(let i=0;i<labels.length;i++){
+      const lbl=labels[i];
+      const score=stance[i];
+      const rate=ffr[i];
+      const era=eraOf(lbl);
+      if(activeEra!=='All'&&era!==activeEra) continue;
+      const evt=evtMap[lbl]||'';
+      const cls=score>60?'hawk':score<40?'dove':'neutral';
+      const name=score>60?'Hawkish':score<40?'Dovish':'Neutral';
+      const col=score>60?'#b91c1c':score<40?'#166534':'#1e3a8a';
+      const fill=Math.round(score/100*52);
+      const tr=document.createElement('tr');
+      if(evt) tr.className='ev';
+      tr.innerHTML=`
+        <td style="font-family:var(--mono);color:var(--text2);">${lbl}</td>
+        <td><div class="sbar"><div class="sbar-bg"><div class="sbar-fill" style="width:${fill}px;background:${col};"></div></div><span class="sval">${Math.round(score)}</span></div></td>
+        <td><span class="slbl ${cls}">${name}</span></td>
+        <td class="r" style="color:var(--text2);">${rate.toFixed(2)}%</td>
+        <td style="color:var(--text3);font-family:var(--mono);font-size:11px;">${era}</td>
+        <td class="evlbl">${evt}</td>`;
+      frag.appendChild(tr);
+      count++;
+    }
+
+    tbody.innerHTML='';
+    tbody.appendChild(frag);
+    const s=document.getElementById('tblSummary');
+    if(s) s.textContent=`${count} months shown${activeEra!=='All'?' · '+activeEra+' era':' · all eras (Jan 2000 – Jul 2026)'}  ·  highlighted rows = key events`;
+  }
+
+  renderTable();
+}
+
+// ─── MARKET PRICING CHART ───────────────────────────────────
+// [year, month(0=Jan), 6m_cuts, 12m_cuts]
+// Positive = cuts priced. Negative = hikes priced. Units = 25bp moves.
+// Estimated from CME FedWatch data, Bloomberg, and market commentary.
+const PRICING_MILESTONES = [
+  // ── 2021: ZLB → taper signal → aggressive hike pricing ──
+  [2021,0,  0.0,  0.0],  // Jan 2021: ZLB — no moves priced; "transitory" consensus
+  [2021,5,  0.0,  0.5],  // Jun 2021: dot plot shifts; faint hike pricing appears
+  [2021,8,  0.5,  1.5],  // Sep 2021: taper imminent; hike pricing builds
+  [2021,10, 1.0,  2.5],  // Nov 2021: taper officially announced
+  [2021,11, 1.5,  3.5],  // Dec 2021: accelerated taper; 3+ hikes priced for 2022
+
+  // ── 2022: Most aggressive hiking priced in 40 years ──
+  [2022,0,  2.5,  7.0],  // Jan 2022: ~7 hikes priced for 12m — peak pre-hike pricing
+  [2022,2,  1.5,  5.0],  // Mar 2022: first 25bp hike delivered; many more expected
+  [2022,4,  2.0,  5.0],  // May 2022: 50bp hike; still very hawkish priced
+  [2022,5,  1.5,  4.0],  // Jun 2022: first 75bp hike (since 1994)
+  [2022,8,  1.0,  3.0],  // Sep 2022: 3rd 75bp; terminal rate in sight
+  [2022,10, 0.5,  2.0],  // Nov 2022: 4th 75bp; slowing signalled
+  [2022,11, 0.5,  1.5],  // Dec 2022: 50bp; approaching terminal
+
+  // ── 2023 onwards ──
+  // Jan 2023: still pricing ~1 more hike for 12m as SVB era looms
+  [2023,0, -0.5,  0.5],
+  // Mar 2023: SVB collapse — markets rapidly price emergency cuts
+  [2023,2, -1.5, -1.0],
+  // May 2023: last hike (5.0–5.25%), cut pricing pushed to late 2023
+  [2023,4, -0.5, -1.5],
+  // Jul 2023: final hike delivered (5.25–5.50%); ~2 cuts priced for 12m
+  [2023,6, -0.5, -2.0],
+  // Sep 2023: first hold; "higher for longer" vs cut hopes tension
+  [2023,8,  0.0, -2.0],
+  // Nov 2023: second hold; cut pricing builds
+  [2023,10,-1.0, -3.5],
+  // Dec 2023: Powell pivots — dot plot signals 3 cuts; market prices 5–6
+  [2023,11,-2.0, -5.5],
+
+  // Jan 2024: peak cut optimism — 6–7 cuts priced for 12m
+  [2024,0, -3.0, -6.5],
+  // Feb 2024: absolute peak — nearly 7 cuts priced
+  [2024,1, -3.5, -7.0],
+  // Mar 2024: first hot CPI print begins the repricing
+  [2024,2, -2.5, -5.5],
+  // Apr 2024: two consecutive hot CPI prints — "higher for longer" returns
+  [2024,3, -1.5, -4.0],
+  // May 2024: cut expectations normalise
+  [2024,4, -1.0, -3.5],
+  // Jun 2024: ~3 cuts remain for 12m
+  [2024,5, -1.0, -3.0],
+  // Aug 2024: weak jobs report + Jackson Hole pivot speech
+  [2024,7, -1.5, -3.5],
+  // Sep 2024: surprise −50bp cut delivered; 2–3 more priced
+  [2024,8, -1.0, -3.0],
+  // Nov 2024: −25bp delivered
+  [2024,9, -0.5, -2.0],
+  // Dec 2024: −25bp; signals "slower pace" — repricing toward fewer cuts
+  [2024,11, 0.0, -1.0],
+
+  // Jan 2025: only 1 cut priced for full year
+  [2025,0,  0.0, -1.0],
+  // Feb 2025: on hold; caution
+  [2025,1,  0.0, -0.5],
+  // Mar 2025: slight pickup in cut pricing
+  [2025,2, -0.5, -1.5],
+  // Apr 2025: "Liberation Day" tariff shock — recession fears spike cut pricing
+  [2025,3, -2.0, -4.5],
+  // May 2025: tariff pause → partial repricing
+  [2025,4, -1.0, -2.5],
+  // Jun 2025: 4th hold; energy shock absorbing cut expectations
+  [2025,5, -0.5, -2.0],
+  // Aug 2025: mild softening
+  [2025,7, -0.5, -1.5],
+  // Sep 2025: −25bp cut resumes
+  [2025,8, -0.5, -1.5],
+  // Nov 2025: −25bp
+  [2025,10,-0.5, -1.0],
+  // Dec 2025: −25bp; signals extended pause ahead
+  [2025,11, 0.0, -0.5],
+
+  // Jan 2026: no moves priced — neutral
+  [2026,0,  0.0,  0.0],
+  // Feb 2026: hike risk begins to show up in futures
+  [2026,1,  0.5,  0.5],
+  // Mar 2026: Middle East energy shock hardens hawkish view
+  [2026,2,  0.5,  1.0],
+  // Apr 2026: 8–4 historic vote; 3 hawk dissents — hike odds surge
+  [2026,3,  1.0,  1.5],
+  // May 2026: Warsh confirmed; CME FedWatch ~40–70% hike by Dec
+  [2026,4,  1.0,  2.0],
+  // Jun 2026: Warsh debut — dot plot flips; Sep hike odds surge post-meeting
+  [2026,5,  1.3,  2.3],
+  // Jul 2026: hawkish hold + 3 dissents; Sep ~75% hike priced; 1-2 hikes for 2026
+  [2026,6,  1.5,  2.0],
+];
+
+// Effective fed funds rate for the pricing chart period [year, month(0=Jan), rate%]
+const PRICING_FFR = [
+  [2021,0,  0.08],  // Jan 2021: ZLB effective rate
+  [2022,1,  0.08],  // Feb 2022: still at ZLB
+  [2022,2,  0.375], // Mar 2022: +25bp → 0.25–0.50%
+  [2022,4,  0.875], // May 2022: +50bp → 0.75–1.00%
+  [2022,5,  1.625], // Jun 2022: +75bp → 1.50–1.75%
+  [2022,6,  2.375], // Jul 2022: +75bp → 2.25–2.50%
+  [2022,8,  3.125], // Sep 2022: +75bp → 3.00–3.25%
+  [2022,10, 3.875], // Nov 2022: +75bp → 3.75–4.00%
+  [2022,11, 4.375], // Dec 2022: +50bp → 4.25–4.50%
+  [2023,1,  4.625], // Feb 2023: +25bp → 4.50–4.75%
+  [2023,2,  4.875], // Mar 2023: +25bp → 4.75–5.00%
+  [2023,4,  5.125], // May 2023: +25bp → 5.00–5.25%
+  [2023,6,  5.375], // Jul 2023: +25bp → 5.25–5.50% (peak)
+  [2024,7,  5.375], // Aug 2024: still at peak — 13 months on hold
+  [2024,8,  4.875], // Sep 2024: −50bp → 4.75–5.00%
+  [2024,9,  4.625], // Nov 2024: −25bp → 4.50–4.75%
+  [2024,11, 4.375], // Dec 2024: −25bp → 4.25–4.50%
+  [2025,0,  4.375], // Jan–Aug 2025: on hold
+  [2025,8,  4.125], // Sep 2025: −25bp → 4.00–4.25%
+  [2025,10, 3.875], // Nov 2025: −25bp → 3.75–4.00%
+  [2025,11, 3.625], // Dec 2025: −25bp → 3.50–3.75%
+  [2026,6,  3.625], // Jul 2026: on hold (5th consecutive)
+];
+
+// Key events to annotate on the pricing chart
+const PRICING_EVENTS = [
+  {label:'Taper announced',  year:2021, month:10, side:'top'},
+  {label:'First 75bp hike',  year:2022, month:5,  side:'top'},
+  {label:'SVB collapse',     year:2023, month:2,  side:'top'},
+  {label:'7 cuts peak',      year:2024, month:1,  side:'bottom'},
+  {label:'First cut −50bp',  year:2024, month:8,  side:'top'},
+  {label:'Liberation Day',   year:2025, month:3,  side:'top'},
+  {label:'Warsh confirmed',  year:2026, month:4,  side:'top'},
+  {label:'Guidance dropped', year:2026, month:5,  side:'bottom'},
+  {label:'Hawkish hold', year:2026, month:6,  side:'top'},
+];
+
+function buildPricingData(){
+  const labels=[], m6=[], m12=[];
+  const ms=PRICING_MILESTONES;
+  for(let i=0;i<ms.length-1;i++){
+    const [y1,mo1,s1,f1]=ms[i],[y2,mo2,s2,f2]=ms[i+1];
+    const total=(y2-y1)*12+(mo2-mo1);
+    for(let step=0;step<total;step++){
+      const t=step/total;
+      const absM=y1*12+mo1+step;
+      labels.push(`${Math.floor(absM/12)}-${String(absM%12+1).padStart(2,'0')}`);
+      m6.push(+(s1+(s2-s1)*t).toFixed(2));
+      m12.push(+(f1+(f2-f1)*t).toFixed(2));
+    }
+  }
+  const [ly,lm,ls,lf]=ms[ms.length-1];
+  labels.push(`${ly}-${String(lm+1).padStart(2,'0')}`);
+  m6.push(ls); m12.push(lf);
+
+  // Interpolate PRICING_FFR to match the labels array
+  const ff=PRICING_FFR;
+  const ffrData=labels.map(lbl=>{
+    const [y,m]=lbl.split('-').map(Number);
+    const a=y*12+(m-1);
+    let lo=ff[0], hi=ff[ff.length-1];
+    for(let i=0;i<ff.length-1;i++){
+      const a1=ff[i][0]*12+ff[i][1], a2=ff[i+1][0]*12+ff[i+1][1];
+      if(a1<=a&&a<=a2){lo=ff[i];hi=ff[i+1];break;}
+    }
+    const a1=lo[0]*12+lo[1], a2=hi[0]*12+hi[1];
+    if(a1===a2) return lo[2];
+    return +(lo[2]+(hi[2]-lo[2])*((a-a1)/(a2-a1))).toFixed(3);
+  });
+
+  return {labels,m6,m12,ffrData};
+}
+
+function initPricingChart(){
+  const {labels,m6,m12,ffrData}=buildPricingData();
+
+  const tickLabels=labels.map(l=>{
+    const [y,m]=l.split('-').map(Number);
+    return (m===1)?String(y):'';
+  });
+
+  const canvas=document.getElementById('pricingChart');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+
+  // Background zone plugin — green above 0, red below
+  const bgPlugin={
+    id:'pricingBg',
+    beforeDraw(chart){
+      const {ctx:c, chartArea:{top,left,width}, scales:{y}}=chart;
+      if(!y) return;
+      c.save();
+      const zero=y.getPixelForValue(0);
+      const top0=y.getPixelForValue(y.max);
+      const bot0=y.getPixelForValue(y.min);
+      // Hikes zone (above zero) — red
+      c.fillStyle='rgba(185,28,28,0.05)';
+      c.fillRect(left,top0,width,zero-top0);
+      // Cuts zone (below zero) — green
+      c.fillStyle='rgba(22,101,52,0.05)';
+      c.fillRect(left,zero,width,bot0-zero);
+      // Zero line
+      c.strokeStyle='rgba(0,0,0,0.2)';
+      c.lineWidth=1; c.setLineDash([]);
+      c.beginPath(); c.moveTo(left,zero); c.lineTo(left+width,zero); c.stroke();
+      // Zone labels
+      c.font='9px DM Mono,monospace'; c.fillStyle='rgba(185,28,28,0.4)';
+      c.textAlign='left'; c.fillText('HIKES PRICED',left+4,top0+14);
+      c.fillStyle='rgba(22,101,52,0.4)';
+      c.fillText('CUTS PRICED',left+4,bot0-6);
+      c.restore();
+    }
+  };
+
+  // Event annotations plugin
+  const evtPlugin={
+    id:'pricingEvt',
+    afterDraw(chart){
+      const {ctx:c, chartArea:{top,bottom,left,width}, scales:{x,y}}=chart;
+      if(!x||!y) return;
+      c.save();
+      PRICING_EVENTS.forEach(ev=>{
+        const lbl=`${ev.year}-${String(ev.month+1).padStart(2,'0')}`;
+        const idx=chart.data.labels.indexOf(lbl);
+        if(idx<0) return;
+        const px=x.getPixelForValue(idx);
+        // Vertical guide
+        c.strokeStyle='rgba(146,64,14,0.25)';
+        c.lineWidth=1; c.setLineDash([3,3]);
+        c.beginPath(); c.moveTo(px,top); c.lineTo(px,bottom); c.stroke();
+        c.setLineDash([]);
+        // Dot on zero line
+        const zy=y.getPixelForValue(0);
+        c.beginPath(); c.arc(px,zy,3,0,Math.PI*2);
+        c.fillStyle='rgba(146,64,14,0.8)'; c.fill();
+        // Label
+        c.font='9px DM Mono,monospace';
+        c.fillStyle='rgba(146,64,14,0.85)';
+        const isRight = px > left+width*0.82;
+        c.textAlign = isRight ? 'right' : 'left';
+        const xOff = isRight ? -5 : 5;
+        const yOff = ev.side==='top' ? top+12 : bottom-6;
+        c.fillText(ev.label, px+xOff, yOff);
+      });
+      c.restore();
+    }
+  };
+
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'6-month horizon',
+          data:m6,
+          borderColor:'#991b1b',
+          borderWidth:2,
+          pointRadius:0,
+          pointHoverRadius:4,
+          pointHoverBackgroundColor:'#991b1b',
+          tension:0.3,
+          fill:'origin',
+          backgroundColor:(ctx2)=>{
+            const g=ctx2.chart.ctx.createLinearGradient(0,0,0,240);
+            g.addColorStop(0,'rgba(185,28,28,0.12)');
+            g.addColorStop(0.5,'rgba(185,28,28,0.03)');
+            g.addColorStop(1,'rgba(185,28,28,0.08)');
+            return g;
+          },
+          yAxisID:'y',
+        },
+        {
+          label:'12-month horizon',
+          data:m12,
+          borderColor:'#1e3a8a',
+          borderWidth:2,
+          borderDash:[],
+          pointRadius:0,
+          pointHoverRadius:4,
+          pointHoverBackgroundColor:'#1e3a8a',
+          tension:0.3,
+          fill:'origin',
+          backgroundColor:(ctx2)=>{
+            const g=ctx2.chart.ctx.createLinearGradient(0,0,0,240);
+            g.addColorStop(0,'rgba(30,58,138,0.10)');
+            g.addColorStop(0.5,'rgba(30,58,138,0.02)');
+            g.addColorStop(1,'rgba(30,58,138,0.07)');
+            return g;
+          },
+          yAxisID:'y',
+        },
+        {
+          label:'Effective FFR',
+          data:ffrData,
+          borderColor:'rgba(60,60,60,0.55)',
+          borderWidth:1.5,
+          borderDash:[5,3],
+          pointRadius:0,
+          pointHoverRadius:3,
+          pointHoverBackgroundColor:'rgba(60,60,60,0.7)',
+          tension:0.1,
+          fill:false,
+          yAxisID:'y2',
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      animation:{duration:600},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(255,255,255,0.98)',
+          borderColor:'rgba(0,0,0,0.12)',
+          borderWidth:1,
+          titleColor:'#1c1917',
+          bodyColor:'#57534e',
+          titleFont:{family:'DM Mono',size:11},
+          bodyFont:{family:'DM Sans',size:12},
+          padding:10,
+          callbacks:{
+            title:(items)=>items[0].label,
+            label:(item)=>{
+              if(item.datasetIndex===2) return ` FFR: ${(+item.raw).toFixed(2)}%`;
+              const v=item.raw;
+              const horizon=item.datasetIndex===0?'6m':'12m';
+              if(v>0) return ` ${horizon}: ${v.toFixed(1)} hike${Math.abs(v)!==1?'s':''} priced`;
+              if(v<0) return ` ${horizon}: ${Math.abs(v).toFixed(1)} cut${Math.abs(v)!==1?'s':''} priced`;
+              return ` ${horizon}: neutral (no moves priced)`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          type:'category',
+          ticks:{
+            color:'#a8a29e',
+            font:{family:'DM Mono',size:10},
+            callback:(val,i)=>tickLabels[i]||null,
+            maxRotation:0,
+            autoSkip:false,
+          },
+          grid:{color:'rgba(0,0,0,0.07)'},
+          border:{color:'rgba(0,0,0,0.12)'},
+        },
+        y:{
+          ticks:{
+            color:'#a8a29e',
+            font:{family:'DM Mono',size:10},
+            stepSize:1,
+            callback:v=>{
+              if(v===0) return '0';
+              if(v>0) return `+${v} hike${v!==1?'s':''}`;
+              return `${v} cut${v!==-1?'s':''}`;
+            }
+          },
+          grid:{color:'rgba(0,0,0,0.07)'},
+          border:{color:'rgba(0,0,0,0.12)'},
+        },
+        y2:{
+          position:'right',
+          min:0,
+          max:6.5,
+          ticks:{
+            color:'rgba(80,80,80,0.55)',
+            font:{family:'DM Mono',size:10},
+            stepSize:1,
+            callback:v=>v.toFixed(0)+'%',
+          },
+          grid:{display:false},
+          border:{color:'rgba(0,0,0,0.12)'},
+          title:{
+            display:true,
+            text:'Effective FFR',
+            color:'rgba(0,0,0,0.3)',
+            font:{family:'DM Mono',size:9},
+          },
+        }
+      }
+    },
+    plugins:[bgPlugin, evtPlugin]
+  });
+}
+
+// ─── AUTOMATIC DATA LOAD (GitHub Actions-refreshed data.json) ──
+// On page load, try to fetch data.json (kept fresh by the scheduled
+// GitHub Action). If found, render it and show when it was last
+// auto-refreshed. If it's missing or fails to load (e.g. running this
+// file outside the repo), the static content already in the page is
+// left untouched.
+async function loadAutoRefreshedData(){
+  try{
+    const res = await fetch('./data.json', {cache:'no-store'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderDashboard(data);
+    const when = data.updated ? new Date(data.updated).toLocaleString() : 'unknown time';
+    const auto = data.updated_by === 'github-actions-scheduled-refresh';
+    setStatus(`${auto?'Auto-refreshed':'Updated'} ${when} — ${data.rate_range||''} — ${data.vote_result||''}`);
+    console.info('[fomc-tracker] Loaded data.json, last updated:', data.updated, 'by', data.updated_by);
+  }catch(err){
+    console.info('[fomc-tracker] No data.json found or failed to load — showing static content.', err.message);
+  }
+}
+
+// Init on load
+window.addEventListener('load', () => {
+  if(window.Chart){ initChart(); initTable(); initPricingChart(); }
+  loadAutoRefreshedData();
+});
+</script>
+</body>
+</html>
