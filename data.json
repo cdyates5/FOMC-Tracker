@@ -1,52 +1,52 @@
 {
-  "updated": "2026-09-09T13:18:48.693623+00:00",
+  "updated": "2026-09-10T13:17:49.456271+00:00",
   "rate_range": "3.50-3.75%",
   "last_meeting": "July 28-29, 2026",
   "next_meeting": "September 15-16, 2026",
   "vote_result": "9-3 (hawkish hold)",
   "overall_stance": "Leaning Hawkish",
-  "overall_stance_score": 62,
-  "stance_summary": "The Fed held rates at 3.50-3.75% in July by a 9-3 vote, the most divided decision since 2016, with three regional presidents dissenting in favor of an immediate hike. Chairman Warsh delivered an unexpectedly hawkish Jackson Hole address emphasizing the 2% PCE target and calling financial conditions 'not restrictive,' pushing hike odds for September above 50%, though Governor Waller's more dovish September 3 remarks have since pulled odds back down. The committee is now sharply data-dependent on the delayed August CPI report (due September 11) just days before the meeting.",
-  "policy_outlook": "The September 15-16 meeting will include a fresh Summary of Economic Projections and dot plot, the first since June, giving markets a clearer read on the committee's rate path. With inflation still running near 3.4% (July) and above the 2% goal for over five years, three sitting hawks (Hammack, Kashkari, Logan) have publicly pressed for further tightening, while Waller and Williams say they could support a hold if the August CPI print confirms continued disinflation. A knife-edge outcome is likely: either a second consecutive divided hold or the first hike since the tightening cycle ended, with markets pricing roughly a coin-flip probability of a 25bp increase to 3.75-4.00%.",
-  "hawk_count": 6,
-  "neutral_count": 5,
+  "overall_stance_score": 63,
+  "stance_summary": "The FOMC held rates at 3.50-3.75% in July with an unusually large three-member hawkish dissent (Hammack, Kashkari, Logan) pushing for an immediate hike, the most divided vote since 2016. Chair Warsh has stressed inflation is 'concerning' and unresolved, while several voters (Williams, Barr, Jefferson) have opened the door to a September hike, though Waller, Bowman and Paulson favor holding barring a hot August CPI print.",
+  "policy_outlook": "September 15-16 is a live, closely contested meeting with CME FedWatch and prediction markets oscillating between roughly 50-66% odds of a 25bp hike depending on daily Fed-speak, ahead of the critical August CPI report due September 11. A strong August payrolls beat (162k) and firm 4.1% unemployment have shifted Fed attention toward above-target inflation (3.4% headline, 2.5% core as of July) rather than labor-market softness. A hawkish hold with a split SEP dot plot remains a plausible middle outcome if inflation data comes in merely in-line rather than hot.",
+  "hawk_count": 7,
+  "neutral_count": 4,
   "dove_count": 1,
-  "alert": "August CPI (due Sept 11) lands just days before the Sept 15-16 meeting and is widely seen as the swing factor; FedWatch-implied hike odds have swung from ~37% to ~70% and back to ~48-59% within the past two weeks amid dueling hawkish (Warsh, Barr, Cook, Hammack, Kashkari, Logan) and cautious (Waller, Williams) commentary.",
+  "alert": "August CPI report releases September 11, 2026, one trading week before the September 15-16 FOMC decision; markets see this print as the swing factor between a third consecutive hold and the first hike of the cycle.",
   "members": [
     {
       "name": "Kevin Warsh",
-      "title": "Chairman",
+      "title": "Chair",
       "voter": true,
       "stance": "Hawkish",
       "stance_score": 72,
       "dissent": null,
       "dissent_detail": null,
       "is_new": true,
-      "note": "Warsh became Chair in May 2026 and has scrapped forward guidance, shrinking FOMC statements dramatically. His Jackson Hole speech was read as hawkish, recommitting to the 2% PCE target and calling financial conditions 'not restrictive,' though he has resisted signaling the September outcome, calling his approach 'deliberate ambiguity.'",
-      "latest_source": "Jackson Hole Economic Policy Symposium keynote, August 28, 2026"
+      "note": "Warsh avoided explicit forward guidance at Jackson Hole but called inflation 'concerning' and said softer summer readings don't show underlying trends have meaningfully improved. He has pushed the Fed toward a more minimalist, hawkish-leaning communication style since taking over in May 2026.",
+      "latest_source": "Jackson Hole Economic Policy Symposium speech, August 28, 2026"
     },
     {
       "name": "Jerome Powell",
-      "title": "Governor (Former Chair)",
+      "title": "Governor (former Chair)",
       "voter": true,
       "stance": "Neutral",
       "stance_score": 50,
       "dissent": null,
       "dissent_detail": null,
       "is_new": false,
-      "note": "Powell stepped down as Chair in May 2026 but remains on the Board of Governors, with his governor term running until January 2028; he has kept a lower public profile on rate policy since the transition, focused on institutional matters including an ongoing investigation into the Fed's headquarters renovation.",
-      "latest_source": "Board of Governors 2026 speeches listing"
+      "note": "Powell stepped down as Chair in May 2026 but remains a Board Governor, saying he intends to 'keep a low profile' and not shadow the new chair. He has largely avoided public commentary on the near-term rate path since the transition.",
+      "latest_source": "2026 John F. Kennedy Profile in Courage Award remarks"
     },
     {
       "name": "John Williams",
-      "title": "Vice Chair, President of the Federal Reserve Bank of New York",
+      "title": "President, Federal Reserve Bank of New York; FOMC Vice Chair",
       "voter": true,
-      "stance": "Neutral",
-      "stance_score": 58,
+      "stance": "Hawkish",
+      "stance_score": 63,
       "dissent": null,
       "dissent_detail": null,
       "is_new": false,
-      "note": "Williams shifted from firmly backing a hold to signaling openness to a September hike, saying there are 'no clear signs' current policy is sufficient to return inflation to target, while attributing the recent Treasury yield surge to AI-driven growth rather than inflation fear.",
+      "note": "Williams shifted from a 'wait-and-see' posture to explicitly signaling openness to a September hike, saying there are 'no clear signs' current policy is sufficient to return inflation to target. He called recent inflation data 'encouraging' but wants a fuller picture before committing either way.",
       "latest_source": "CNBC 'Squawk Box' interview, September 2, 2026"
     },
     {
@@ -54,48 +54,48 @@
       "title": "Governor",
       "voter": true,
       "stance": "Hawkish",
-      "stance_score": 62,
+      "stance_score": 63,
       "dissent": null,
       "dissent_detail": null,
       "is_new": false,
-      "note": "Barr warned the Fed should be prepared to 'act decisively to raise rates' if inflation fails to moderate, noting price pressures have been above target for over five years, though he says his vote depends on incoming August data.",
-      "latest_source": "Speech at the Second-Chance Lending Forum, September 1, 2026"
+      "note": "Barr said he is ready to act 'decisively to raise rates' if August inflation data comes in hot, citing risk of broader price pressures taking hold after more than five years above target. He remains formally open to either a hike or a hold pending the data.",
+      "latest_source": "Second Chance Lending Forum remarks, September 1, 2026"
     },
     {
       "name": "Michelle Bowman",
       "title": "Vice Chair for Supervision",
       "voter": true,
       "stance": "Dovish",
-      "stance_score": 35,
+      "stance_score": 28,
       "dissent": null,
       "dissent_detail": null,
       "is_new": false,
-      "note": "Despite a historically hawkish reputation, Bowman has penciled in multiple rate cuts this year citing labor-market fragility, though she has acknowledged that a prolonged Middle East conflict and persistent energy-driven inflation could shift her toward favoring tighter policy.",
-      "latest_source": "Speech in Reykjav\u00edk, Iceland, May 29, 2026"
+      "note": "Bowman has repeatedly cautioned against hiking to offset what she views as a temporary energy-driven inflation spike, warning it would add 'unwarranted policy restraint.' She has said she's penciled in multiple rate cuts later in 2026 given ongoing labor-market fragility.",
+      "latest_source": "Speech on monetary policy, May 29, 2026 (Reykjav\u00edk Economic Conference)"
     },
     {
       "name": "Lisa Cook",
       "title": "Governor",
+      "voter": true,
+      "stance": "Neutral",
+      "stance_score": 55,
+      "dissent": null,
+      "dissent_detail": null,
+      "is_new": false,
+      "note": "Cook has flagged core PCE running near 3.3% as too high and said she is prepared to support a rate increase if necessary, while also noting disinflationary forces could bring inflation down without further tightening. She describes the labor market as stable in a 'low-hire, low-fire' environment.",
+      "latest_source": "Speech on the U.S. and Alaskan economies, August 28, 2026"
+    },
+    {
+      "name": "Philip Jefferson",
+      "title": "Vice Chair",
       "voter": true,
       "stance": "Hawkish",
       "stance_score": 62,
       "dissent": null,
       "dissent_detail": null,
       "is_new": false,
-      "note": "Cook said she is 'prepared to act' on a rate hike unless inflation data improves, stating she views inflation risks as currently outweighing employment risks in the Fed's dual mandate.",
-      "latest_source": "Speech in Anchorage, Alaska, August 5, 2026"
-    },
-    {
-      "name": "Philip Jefferson",
-      "title": "Vice Chair",
-      "voter": true,
-      "stance": "Neutral",
-      "stance_score": 52,
-      "dissent": null,
-      "dissent_detail": null,
-      "is_new": false,
-      "note": "Jefferson has consistently framed policy as 'well positioned' while flagging upside inflation risks from tariffs and energy shocks, expressing support for holding steady but openness to hiking if disinflation stalls.",
-      "latest_source": "Speech at Stanford Institute for Economic Policy Research, July 16, 2026"
+      "note": "Jefferson has warned that if inflation doesn't cool soon it 'could be appropriate to reconsider' the current policy stance to preserve credibility on price stability. He has appeared comfortable with current positioning but flagged a bias toward tightening if data disappoints.",
+      "latest_source": "Speech on navigating economic shocks, August 5, 2026"
     },
     {
       "name": "Christopher Waller",
@@ -106,44 +106,44 @@
       "dissent": null,
       "dissent_detail": null,
       "is_new": false,
-      "note": "Waller pushed back on Warsh's hawkish Jackson Hole tone, saying he would be 'inclined' to support a hold if the August CPI report (due Sept 11) confirms continued disinflation, though he would 'consider a rate hike' if inflation comes in hot.",
-      "latest_source": "Reuters NEXT Newsmaker interview, September 3, 2026"
+      "note": "Waller said he is leaning toward holding rates steady in September, noting recent trends 'suggest we are finally seeing some signs of disinflation,' but explicitly said he'd consider a hike if the August CPI print comes in hot. His remarks contrast with Warsh's more hawkish Jackson Hole tone.",
+      "latest_source": "Reuters NEXT Newsmaker event remarks, September 3, 2026"
     },
     {
       "name": "Beth Hammack",
       "title": "President, Federal Reserve Bank of Cleveland",
       "voter": true,
       "stance": "Hawkish",
-      "stance_score": 82,
+      "stance_score": 78,
       "dissent": "hawkish",
-      "dissent_detail": "Dissented at the July 2026 meeting, preferring a 25bp hike",
-      "is_new": false,
-      "note": "Hammack has been the most vocal hawk, saying current policy 'isn't restrictive enough' and suggesting it may take more than a single quarter-point increase to bring inflation back to target.",
-      "latest_source": "Yahoo Finance interview, late July 2026"
+      "dissent_detail": "Dissented at the July 2026 meeting, preferring a 25bp hike to 3.75-4.00%",
+      "is_new": true,
+      "note": "Hammack was one of three dissenters at the July meeting arguing for an immediate quarter-point hike, and has warned that AI infrastructure demand is adding to inflationary pressure. She rotated onto the voting seat for 2026 and has been among the most vocal hawks on the Committee.",
+      "latest_source": "FOMC July 28-29, 2026 meeting dissent"
     },
     {
       "name": "Neel Kashkari",
       "title": "President, Federal Reserve Bank of Minneapolis",
       "voter": true,
       "stance": "Hawkish",
-      "stance_score": 78,
+      "stance_score": 77,
       "dissent": "hawkish",
-      "dissent_detail": "Dissented at the July 2026 meeting, preferring a 25bp hike",
-      "is_new": false,
-      "note": "Kashkari has called for a gradual series of small rate hikes to address persistent supply shocks\u2014including tariffs and AI-infrastructure spending\u2014arguing early action could prevent the need for larger moves later.",
-      "latest_source": "Public statement, August 5, 2026"
+      "dissent_detail": "Dissented at the July 2026 meeting, preferring a 25bp hike to 3.75-4.00%",
+      "is_new": true,
+      "note": "Kashkari dissented in July favoring a hike and has pointed to AI data-center construction, tariff-driven goods inflation, and Middle East-linked supply disruptions as reasons prices could stay elevated. He has shifted over 2026 toward expecting a hike by year-end.",
+      "latest_source": "FOMC July 28-29, 2026 meeting dissent"
     },
     {
       "name": "Lorie Logan",
       "title": "President, Federal Reserve Bank of Dallas",
       "voter": true,
       "stance": "Hawkish",
-      "stance_score": 78,
+      "stance_score": 80,
       "dissent": "hawkish",
-      "dissent_detail": "Dissented at the July 2026 meeting, preferring a 25bp hike",
-      "is_new": false,
-      "note": "Logan has said rates should be 'modestly' higher and that the Fed cannot rely on an unexpected economic shock to bring down inflation, favoring proactive tightening.",
-      "latest_source": "Public statement, July 31, 2026"
+      "dissent_detail": "Dissented at the July 2026 meeting, preferring a 25bp hike to 3.75-4.00%",
+      "is_new": true,
+      "note": "Logan has argued that with inflation persistently above target, a fed-funds rate near 4% 'isn't nearly as restrictive as you might have thought,' and was one of three dissenters pushing for a July hike. She remains among the most hawkish voices on the current Committee.",
+      "latest_source": "FOMC July 28-29, 2026 meeting dissent"
     },
     {
       "name": "Anna Paulson",
@@ -153,8 +153,8 @@
       "stance_score": 58,
       "dissent": null,
       "dissent_detail": null,
-      "is_new": false,
-      "note": "Paulson voted with the July majority to hold, calling it 'not a close call,' and estimates underlying inflation ex-shocks near 2.4-2.8%, but says a further hike 'remains a viable possibility' if progress on core inflation stalls.",
+      "is_new": true,
+      "note": "Paulson voted with the majority to hold in July, calling it 'not a close call' despite the 9-3 split, and estimates underlying inflation (excluding energy/tariff shocks) at 2.4-2.8%. She says rate cuts would only be appropriate after sustained progress against inflation, keeping her open-minded but centrist.",
       "latest_source": "CNBC interview, August 4, 2026"
     }
   ],
